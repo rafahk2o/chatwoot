@@ -92,6 +92,8 @@ jobs:
             IdentityFile ~/.ssh/deploy_key
             IdentitiesOnly yes
             StrictHostKeyChecking yes
+            ServerAliveInterval 30
+            ServerAliveCountMax 10
           EOF
 
       - name: Upload stack files
