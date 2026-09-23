@@ -4,7 +4,7 @@
 class SetMelckInboxTimezone < ActiveRecord::Migration[7.1]
   def up
     Inbox.where(working_hours_enabled: false, timezone: [nil, '', 'UTC', 'America/Los_Angeles'])
-         .update_all(timezone: 'America/Sao_Paulo')
+         .update_all(timezone: 'America/Sao_Paulo') # rubocop:disable Rails/SkipsModelValidations -- avoid inbox_updated webhooks
   end
 
   def down; end

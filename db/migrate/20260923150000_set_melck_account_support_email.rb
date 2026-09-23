@@ -8,7 +8,7 @@ class SetMelckAccountSupportEmail < ActiveRecord::Migration[7.1]
 
     Account.where(support_email: [nil, ''])
            .or(Account.where('support_email ILIKE ?', '%@chatwoot.com%'))
-           .update_all(support_email: "Melck <#{sender}>")
+           .update_all(support_email: "Melck <#{sender}>") # rubocop:disable Rails/SkipsModelValidations -- avoid account_updated webhooks
   rescue Mail::Field::ParseError
     nil
   end
