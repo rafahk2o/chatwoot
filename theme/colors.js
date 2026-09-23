@@ -1,6 +1,4 @@
 const {
-  blue,
-  blueDark,
   green,
   greenDark,
   yellow,
@@ -14,19 +12,20 @@ const {
 } = require('@radix-ui/colors');
 
 export const colors = {
+  // Melck: legacy scale on the Melck blue (#013859 at 500), matching --blue-* in _next-colors.scss.
   woot: {
-    25: blue.blue2,
-    50: blue.blue3,
-    75: blue.blue4,
-    100: blue.blue5,
-    200: blue.blue7,
-    300: blue.blue8,
-    400: blueDark.blue11,
-    500: blueDark.blue10,
-    600: blueDark.blue9,
-    700: blueDark.blue8,
-    800: blueDark.blue6,
-    900: blueDark.blue2,
+    25: '#F3F8FC',
+    50: '#E6F0F7',
+    75: '#D6E6F1',
+    100: '#C4DAE9',
+    200: '#8CB2CD',
+    300: '#6292B4',
+    400: '#025280',
+    500: '#013859',
+    600: '#012D48',
+    700: '#011E30',
+    800: '#0D2E45',
+    900: '#0C161E',
   },
   green: {
     50: greenDark.green12,
