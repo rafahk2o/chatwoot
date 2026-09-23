@@ -123,7 +123,7 @@ export default {
         ref="messageInput"
         v-model="messageContent"
         :rows="4"
-        class="resize-none block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border !outline-2 border-slate-100 focus:ring-woot-500 focus:border-woot-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-woot-500 dark:focus:border-woot-500"
+        class="resize-none block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border !outline-2 border-slate-100 focus:ring-woot-500 focus:border-woot-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-woot-200 dark:focus:border-woot-200"
         placeholder="Type a message... [CMD/CTRL + Enter to send]"
         autofocus
         autocomplete="off"

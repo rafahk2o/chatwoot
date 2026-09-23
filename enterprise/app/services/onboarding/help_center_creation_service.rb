@@ -1,5 +1,5 @@
 class Onboarding::HelpCenterCreationService
-  DEFAULT_PORTAL_COLOR = '#1f93ff'.freeze
+  DEFAULT_PORTAL_COLOR = '#013859'.freeze
   LOGO_MAX_DOWNLOAD_SIZE = 5.megabytes
 
   def initialize(account, user)
