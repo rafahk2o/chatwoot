@@ -34,7 +34,8 @@ class SearchService
     conversations_query = current_account.conversations.where(inbox_id: accessable_inbox_ids)
                                          .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
                                          .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
-                            ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
+                            ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search\
+                            #{Contacts::PhoneSearch.new(search_query).or_sql('contacts.phone_number')}", search: "%#{search_query}%")
 
     if current_account.feature_enabled?('advanced_search')
       conversations_query = apply_time_filter(conversations_query,
@@ -164,7 +165,8 @@ class SearchService
   def filter_contacts
     contacts_query = current_account.contacts.where(
       "name ILIKE :search OR email ILIKE :search OR phone_number
-      ILIKE :search OR identifier ILIKE :search", search: "%#{search_query}%"
+      ILIKE :search OR identifier ILIKE :search#{Contacts::PhoneSearch.new(search_query).or_sql('phone_number')}",
+      search: "%#{search_query}%"
     )
 
     contacts_query = apply_time_filter(contacts_query, 'last_activity_at') if current_account.feature_enabled?('advanced_search')
