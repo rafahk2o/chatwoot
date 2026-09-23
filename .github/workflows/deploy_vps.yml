@@ -39,8 +39,13 @@ jobs:
         id: meta
         run: echo "image=${IMAGE_REPO}:sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
+      # Community edition (MIT), same as upstream's -ce images: the enterprise/
+      # code is licensed separately and, without a paid plan, resets branding.
+      - name: Strip enterprise code
+        run: rm -rf enterprise spec/enterprise
+
       - name: Set Chatwoot edition
-        run: echo -en '\nENV CW_EDITION="ee"' >> docker/Dockerfile
+        run: echo -en '\nENV CW_EDITION="ce"' >> docker/Dockerfile
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
