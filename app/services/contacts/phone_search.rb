@@ -21,15 +21,7 @@ class Contacts::PhoneSearch
   def patterns
     return [] unless phone_like?
 
-    national = digits.start_with?('55') && digits.length >= 12 ? digits[2..] : digits
-    variants = [national]
-    case national.length
-    when 11 then variants << (national[0, 2] + national[3..]) if national[2] == '9' # DDD 9XXXX-XXXX -> DDD XXXX-XXXX
-    when 10 then variants << "#{national[0, 2]}9#{national[2..]}" # DDD XXXX-XXXX -> DDD 9XXXX-XXXX
-    when 9 then variants << national[1..] if national.start_with?('9')
-    when 8 then variants << "9#{national}"
-    end
-    variants.uniq
+    [national, with_nine_toggled].compact.uniq
   end
 
   # " OR (<column> LIKE '%...%' OR ...)" to append to an existing search clause, or "".
@@ -44,5 +36,23 @@ class Contacts::PhoneSearch
 
   def digits
     @digits ||= @query.gsub(/\D/, '')
+  end
+
+  def national
+    @national ||= digits.start_with?('55') && digits.length >= 12 ? digits[2..] : digits
+  end
+
+  # The same number with the mobile 9 added or removed, when its length allows it.
+  def with_nine_toggled
+    case national.length
+    when 11 then drop_nine(2) # DDD 9XXXX-XXXX -> DDD XXXX-XXXX
+    when 10 then "#{national[0, 2]}9#{national[2..]}" # DDD XXXX-XXXX -> DDD 9XXXX-XXXX
+    when 9 then drop_nine(0)
+    when 8 then "9#{national}"
+    end
+  end
+
+  def drop_nine(index)
+    national[0, index] + national[(index + 1)..] if national[index] == '9'
   end
 end
