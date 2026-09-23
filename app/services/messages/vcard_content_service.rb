@@ -39,7 +39,7 @@ class Messages::VcardContentService
   end
 
   def read(attachment)
-    attachment.file.blob.download.force_encoding(Encoding::UTF_8).scrub('')
+    attachment.file.blob.open(&:read).force_encoding(Encoding::UTF_8).scrub('')
   end
 
   def parse(vcard)

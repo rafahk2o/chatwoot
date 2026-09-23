@@ -2,6 +2,8 @@ require 'rails_helper'
 
 describe Messages::VcardContentService do
   let(:account) { create(:account) }
+  # Attachment types are only restricted on website widget inboxes; WAHA uses API inboxes.
+  let(:inbox) { create(:channel_api, account: account).inbox }
   let(:header) { described_class::HEADER }
   let(:iphone_vcard) do
     "BEGIN:VCARD\r\nVERSION:3.0\r\nN:;;;;\r\nFN:Rodrigues Cargas\r\n" \
@@ -14,7 +16,7 @@ describe Messages::VcardContentService do
   end
 
   def message_with_vcards(content:, vcards:, message_type: 'incoming')
-    message = build(:message, account: account, content: content, message_type: message_type)
+    message = build(:message, account: account, inbox: inbox, content: content, message_type: message_type)
     vcards.each_with_index do |vcard, index|
       attachment = message.attachments.new(account_id: account.id, file_type: :file)
       attachment.file.attach(io: StringIO.new(vcard), filename: "vcard-#{index + 1}.vcf", content_type: 'text/vcard')
