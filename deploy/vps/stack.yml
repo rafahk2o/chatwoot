@@ -1,0 +1,70 @@
+# Parallel Chatwoot install on the VPS (Docker Swarm stack "chatwoot_v2").
+# Fully isolated from the existing "chatwoot" stack: own Postgres, Redis,
+# volumes and network. Deployed by .github/workflows/deploy_vps.yml via deploy.sh.
+version: '3.8'
+
+x-chatwoot: &chatwoot
+  image: ${CHATWOOT_IMAGE:?CHATWOOT_IMAGE is required}
+  env_file: .env
+  volumes:
+    - storage:/app/storage
+  networks:
+    - internal
+
+services:
+  app:
+    <<: *chatwoot
+    entrypoint: docker/entrypoints/rails.sh
+    command: sh -c "bundle exec rails db:chatwoot_prepare && bundle exec rails s -p 3000 -b 0.0.0.0"
+    ports:
+      - target: 3000
+        published: ${APP_PORT:-3001}
+        mode: ingress
+    deploy:
+      replicas: ${APP_REPLICAS:-1}
+      update_config:
+        order: stop-first
+        failure_action: pause
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2048M
+
+  sidekiq:
+    <<: *chatwoot
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    deploy:
+      replicas: ${APP_REPLICAS:-1}
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1536M
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    env_file: .env
+    environment:
+      POSTGRES_DB: chatwoot
+      POSTGRES_USER: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis:/data
+    networks:
+      - internal
+
+volumes:
+  storage:
+  postgres:
+  redis:
+
+networks:
+  internal:
+    driver: overlay
+    attachable: true

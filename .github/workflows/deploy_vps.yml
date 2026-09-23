@@ -1,0 +1,112 @@
+# Builds the Chatwoot image, pushes it to GHCR and deploys it to the
+# parallel "chatwoot_v2" swarm stack on the VPS (see deploy/vps/).
+#
+# Required repository secrets:
+#   VPS_HOST         - VPS address (65.108.59.237)
+#   VPS_USER         - SSH user (root)
+#   VPS_SSH_KEY      - private key authorized on the VPS for deploys
+#   VPS_KNOWN_HOSTS  - output of `ssh-keyscan -t ed25519 <VPS_HOST>`
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/chatwoot
+  DEPLOY_DIR: /opt/chatwoot-v2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: meta
+        run: echo "image=${IMAGE_REPO}:sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Set Chatwoot edition
+        run: echo -en '\nENV CW_EDITION="ee"' >> docker/Dockerfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ${{ env.IMAGE_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: deploy/vps
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ secrets.VPS_HOST }}
+            User ${{ secrets.VPS_USER }}
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Upload stack files
+        run: |
+          ssh vps "mkdir -p $DEPLOY_DIR"
+          scp deploy/vps/stack.yml deploy/vps/deploy.sh vps:$DEPLOY_DIR/
+          ssh vps "chmod +x $DEPLOY_DIR/deploy.sh"
+
+      - name: Deploy
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | ssh vps "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+          status=0
+          ssh vps "$DEPLOY_DIR/deploy.sh '$IMAGE'" || status=$?
+          ssh vps "docker logout ghcr.io" || true
+          exit $status
