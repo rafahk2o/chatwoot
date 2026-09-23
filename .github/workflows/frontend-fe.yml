@@ -1,9 +1,7 @@
 name: Frontend Lint & Test
 
+# Melck fork: tests run on pull requests only; a push to develop just deploys (deploy_vps.yml).
 on:
-  push:
-    branches:
-      - develop
   pull_request:
     branches:
       - develop
