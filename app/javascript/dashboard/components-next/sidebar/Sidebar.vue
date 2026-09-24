@@ -500,6 +500,14 @@ const menuItems = computed(() => {
         },
       ],
     },
+    // Melck fork: conversation board (Kanban by agent)
+    {
+      name: 'Conversation Board',
+      label: t('CONVERSATION_BOARD.SIDEBAR'),
+      icon: 'i-lucide-kanban',
+      to: accountScopedRoute('conversation_board'),
+      activeOn: ['conversation_board'],
+    },
     {
       name: 'Captain',
       icon: 'i-woot-captain',
