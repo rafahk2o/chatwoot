@@ -56,6 +56,10 @@ RSpec.describe 'Conversation board API', type: :request do
     ids = board_ids(admin, team_id: team.id)
 
     expect(ids).to contain_exactly(team_card.display_id, unassigned_in_team_inbox.display_id)
-    expect(response.parsed_body['agents'].pluck('id')).to eq([agent.id])
+    body = response.parsed_body
+    expect(body['agents'].pluck('id')).to eq([agent.id])
+    # The move dialog can still reach agents outside the selected team
+    expect(body['directory'].pluck('id')).to include(agent.id, outsider.id, admin.id)
+    expect(body['teams'].find { |t| t['id'] == team.id }['member_ids']).to eq([agent.id])
   end
 end

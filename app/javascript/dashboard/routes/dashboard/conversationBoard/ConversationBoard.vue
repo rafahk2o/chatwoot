@@ -13,6 +13,7 @@ import ConversationBoardAPI from 'dashboard/api/conversationBoard';
 import ConversationAPI from 'dashboard/api/inbox/conversation';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import MoveConversationDialog from './MoveConversationDialog.vue';
 
 const UNASSIGNED = 'unassigned';
 const TEAM_STORAGE_KEY = 'melck.conversationBoard.teamId';
@@ -32,6 +33,8 @@ const readStoredTeam = () => {
 
 const teams = ref([]);
 const agents = ref([]);
+const directory = ref([]);
+const moveDialogRef = ref(null);
 const conversations = ref([]);
 const truncated = ref(false);
 const teamId = ref(readStoredTeam());
@@ -41,8 +44,10 @@ const hasError = ref(false);
 const isDragging = ref(false);
 const columnCards = ref({});
 
-const agentsById = computed(() =>
-  Object.fromEntries(agents.value.map(agent => [agent.id, agent]))
+// Every agent in the account, not only the current columns: cards can be
+// moved to other teams through the move dialog.
+const directoryById = computed(() =>
+  Object.fromEntries(directory.value.map(agent => [agent.id, agent]))
 );
 
 const columns = computed(() => [
@@ -80,6 +85,7 @@ const fetchBoard = async () => {
     const { data } = await ConversationBoardAPI.get({ teamId: teamId.value });
     teams.value = data.teams;
     agents.value = data.agents;
+    directory.value = data.directory;
     conversations.value = data.conversations;
     truncated.value = data.truncated;
     hasError.value = false;
@@ -121,12 +127,11 @@ const canReceive = (agent, conversation) =>
   agent.inbox_ids.includes(conversation.inbox_id);
 
 const checkMove = event => {
-  const target = agentsById.value[event.to.dataset.column];
+  const target = directoryById.value[event.to.dataset.column];
   return canReceive(target, event.draggedContext.element);
 };
 
-const transfer = async (conversation, columnKey) => {
-  const agent = agentsById.value[columnKey] || null;
+const transfer = async (conversation, agent) => {
   if (!canReceive(agent, conversation)) {
     useAlert(
       t('CONVERSATION_BOARD.NOT_INBOX_MEMBER', {
@@ -159,8 +164,13 @@ const transfer = async (conversation, columnKey) => {
 };
 
 const onColumnChange = (columnKey, event) => {
-  if (event.added) transfer(event.added.element, columnKey);
+  if (event.added) {
+    transfer(event.added.element, directoryById.value[columnKey] || null);
+  }
 };
+
+const openMoveDialog = conversation => moveDialogRef.value?.open(conversation);
+const onMove = ({ conversation, agent }) => transfer(conversation, agent);
 
 const openConversation = conversation => {
   router.push({
@@ -288,6 +298,14 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
                 <span class="text-xs text-n-slate-10 shrink-0">
                   {{ timeAgo(element.last_activity_at) }}
                 </span>
+                <Button
+                  icon="i-lucide-arrow-right-left"
+                  size="xs"
+                  variant="ghost"
+                  color="slate"
+                  :title="t('CONVERSATION_BOARD.MOVE.BUTTON')"
+                  @click.stop="openMoveDialog(element)"
+                />
               </div>
               <p
                 v-if="element.last_message"
@@ -339,5 +357,13 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
         </Draggable>
       </div>
     </div>
+
+    <MoveConversationDialog
+      ref="moveDialogRef"
+      :teams="teams"
+      :directory="directory"
+      :default-team-id="teamId"
+      @move="onMove"
+    />
   </section>
 </template>

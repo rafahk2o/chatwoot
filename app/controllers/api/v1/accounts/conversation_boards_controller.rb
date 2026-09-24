@@ -4,7 +4,8 @@
 #
 # Columns are the agents of the selected team (or everyone). Cards are the open
 # and pending conversations the current user can see, assigned to one of those
-# agents or unassigned in an inbox they work in.
+# agents or unassigned in an inbox they work in. `directory` lists every agent
+# and `teams` their members, so a card can be moved to any team from a dialog.
 class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseController
   STATUSES = %w[open pending].freeze
   LIMIT = 1500
@@ -12,8 +13,9 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
   def show
     conversations = board_conversations.to_a
     render json: {
-      teams: Current.account.teams.order(:name).map { |t| { id: t.id, name: t.name } },
+      teams: teams_payload,
       agents: agents.map { |agent| agent_payload(agent) },
+      directory: all_agents.map { |agent| agent_payload(agent) },
       conversations: conversations_payload(conversations),
       truncated: conversations.size >= LIMIT
     }
@@ -27,17 +29,33 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
     @team ||= Current.account.teams.find(params[:team_id])
   end
 
+  def all_agents
+    @all_agents ||= Current.account.users.order(:name).to_a
+  end
+
   def agents
-    @agents ||= (team ? team.members : Current.account.users).order(:name).to_a
+    return all_agents unless team
+
+    @agents ||= all_agents.select { |agent| team_member_ids.include?(agent.id) }
+  end
+
+  def team_member_ids
+    @team_member_ids ||= team.team_members.pluck(:user_id)
+  end
+
+  def teams_payload
+    Current.account.teams.includes(:team_members).order(:name).map do |t|
+      { id: t.id, name: t.name, member_ids: t.team_members.map(&:user_id) }
+    end
   end
 
   def account_users
-    @account_users ||= Current.account.account_users.where(user_id: agents.map(&:id)).index_by(&:user_id)
+    @account_users ||= Current.account.account_users.where(user_id: all_agents.map(&:id)).index_by(&:user_id)
   end
 
   def inbox_ids_by_agent
     @inbox_ids_by_agent ||= InboxMember.joins(:inbox)
-                                       .where(user_id: agents.map(&:id), inboxes: { account_id: Current.account.id })
+                                       .where(user_id: all_agents.map(&:id), inboxes: { account_id: Current.account.id })
                                        .pluck(:user_id, :inbox_id)
                                        .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
   end
@@ -46,7 +64,7 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
     scope = Conversations::PermissionFilterService.new(Current.account.conversations, Current.user, Current.account).perform
     scope = scope.where(status: STATUSES)
     if team
-      team_inbox_ids = inbox_ids_by_agent.values.flatten.uniq
+      team_inbox_ids = agents.flat_map { |agent| inbox_ids_by_agent.fetch(agent.id, []) }.uniq
       scope = scope.where(assignee_id: agents.map(&:id)).or(scope.where(assignee_id: nil, inbox_id: team_inbox_ids))
     end
     scope.includes(:contact, :inbox).order(last_activity_at: :desc).limit(LIMIT)
