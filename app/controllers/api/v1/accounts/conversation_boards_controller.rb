@@ -8,6 +8,8 @@
 # and `teams` their members, so a card can be moved to any team from a dialog.
 # The current user's column is always included, even when a team filter leaves
 # them out, so everyone keeps their own conversations first on the board.
+# Cards can be pinned to the top of their column and reordered by hand; that
+# order lives in ConversationBoardCard and is shared by everyone.
 class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseController
   STATUSES = %w[open pending].freeze
   LIMIT = 1500
@@ -23,7 +25,54 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
     }
   end
 
+  # POST /conversation_board/pin { conversation_id, pinned }
+  def pin
+    conversation = visible_conversations.find_by!(display_id: params[:conversation_id])
+    card = board_card_for(conversation)
+    card.update!(pinned: ActiveModel::Type::Boolean.new.cast(params[:pinned]), updated_by_id: Current.user.id)
+    head :ok
+  end
+
+  # POST /conversation_board/reorder { conversation_ids: [...] } - one column, top to bottom
+  def reorder
+    display_ids = Array(params[:conversation_ids]).map(&:to_i)
+    by_display_id = visible_conversations.where(display_id: display_ids).index_by(&:display_id)
+    ordered = display_ids.filter_map { |display_id| by_display_id[display_id] }
+    return head :ok if ordered.empty?
+
+    assignee_id = ordered.first.assignee_id
+    ordered = ordered.select { |conversation| conversation.assignee_id == assignee_id }
+    save_positions(ordered, assignee_id)
+    head :ok
+  end
+
   private
+
+  def visible_conversations
+    Conversations::PermissionFilterService.new(Current.account.conversations, Current.user, Current.account).perform
+  end
+
+  def board_card_for(conversation)
+    card = ConversationBoardCard.find_or_initialize_by(conversation_id: conversation.id) { |c| c.account_id = Current.account.id }
+    card.assign_attributes(assignee_id: conversation.assignee_id, pinned: false, position: nil) unless card.applies_to?(conversation)
+    card
+  end
+
+  def save_positions(conversations, assignee_id)
+    ids = conversations.map(&:id)
+    ConversationBoardCard.transaction do
+      # Orders saved while the conversation sat in another column no longer apply.
+      stale_cards(ids, assignee_id).delete_all
+      rows = conversations.each_with_index.map do |conversation, index|
+        { account_id: Current.account.id, conversation_id: conversation.id, assignee_id: assignee_id,
+          position: index, updated_by_id: Current.user.id }
+      end
+      # One statement for the whole column; the table has no callbacks to skip.
+      ConversationBoardCard.upsert_all( # rubocop:disable Rails/SkipsModelValidations
+        rows, unique_by: :conversation_id, update_only: %i[assignee_id position updated_by_id]
+      )
+    end
+  end
 
   def team
     return if params[:team_id].blank?
@@ -62,9 +111,15 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
                                        .group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
   end
 
+  def stale_cards(conversation_ids, assignee_id)
+    cards = ConversationBoardCard.where(conversation_id: conversation_ids)
+    return cards.where.not(assignee_id: nil) if assignee_id.nil?
+
+    cards.where('assignee_id IS NULL OR assignee_id <> ?', assignee_id)
+  end
+
   def board_conversations
-    scope = Conversations::PermissionFilterService.new(Current.account.conversations, Current.user, Current.account).perform
-    scope = scope.where(status: STATUSES)
+    scope = visible_conversations.where(status: STATUSES)
     if team
       team_inbox_ids = agents.reject { |agent| agent.id == Current.user.id && team_member_ids.exclude?(agent.id) }
                              .flat_map { |agent| inbox_ids_by_agent.fetch(agent.id, []) }.uniq
@@ -86,8 +141,18 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
   end
 
   def conversations_payload(conversations)
-    last_messages = last_messages_for(conversations.map(&:id))
-    conversations.map { |conversation| card_payload(conversation, last_messages[conversation.id]) }
+    ids = conversations.map(&:id)
+    last_messages = last_messages_for(ids)
+    cards = ConversationBoardCard.where(conversation_id: ids).index_by(&:conversation_id)
+    conversations.map do |conversation|
+      card_payload(conversation, last_messages[conversation.id]).merge(order_payload(cards[conversation.id], conversation))
+    end
+  end
+
+  def order_payload(card, conversation)
+    return { pinned: false, position: nil } unless card&.applies_to?(conversation)
+
+    { pinned: card.pinned, position: card.position }
   end
 
   def card_payload(conversation, last_message)

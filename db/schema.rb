@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_23_160000) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_24_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -847,6 +847,19 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_23_160000) do
     t.index ["inbox_id"], name: "index_conversation_outcomes_on_inbox_id"
   end
 
+  create_table "conversation_board_cards", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "assignee_id"
+    t.boolean "pinned", default: false, null: false
+    t.integer "position"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_conversation_board_cards_on_account_id"
+    t.index ["conversation_id"], name: "index_conversation_board_cards_on_conversation_id", unique: true
+  end
+
   create_table "conversation_participants", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -1602,6 +1615,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_23_160000) do
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
+  add_foreign_key "conversation_board_cards", "conversations", on_delete: :cascade
   add_foreign_key "inboxes", "portals"
   add_foreign_key "user_sessions", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).

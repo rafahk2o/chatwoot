@@ -34,6 +34,32 @@
       "OPEN_FULL": "Open in conversations view",
       "CLOSE": "Close",
       "LOAD_ERROR": "Could not open the conversation"
+    },
+    "ORDER": {
+      "PIN": "Pin to top",
+      "UNPIN": "Unpin",
+      "ERROR": "Could not save the board order",
+      "CLEAR_SEARCH": "Clear the search to reorder the column"
+    },
+    "TV": {
+      "BUTTON": "TV mode",
+      "TITLE": "Operations panel",
+      "OPEN": "Open",
+      "PENDING": "Pending",
+      "WAITING": "Waiting for reply",
+      "LONGEST_WAIT": "Longest wait",
+      "UNASSIGNED": "Unassigned",
+      "NO_TEAM": "No team",
+      "TEAM_SUMMARY": "{total} conversations · {waiting} waiting",
+      "AGENT_WAITING": "{count} waiting · {time}",
+      "ALERTS": "Alerts",
+      "NO_ALERTS": "All caught up",
+      "ALERT_UNASSIGNED": "{count} unassigned conversations (longest wait: {time})",
+      "ALERT_WAIT": "{team}: {count} waiting over {minutes} min",
+      "ALERT_CAPACITY": "{name}: {count} conversations (limit {limit})",
+      "UPDATED": "Updated at {time}",
+      "OFFLINE": "Offline, retrying...",
+      "FULLSCREEN": "Full screen"
     }
   }
 }
