@@ -63,4 +63,40 @@ RSpec.describe 'Conversation board API', type: :request do
     expect(body['directory'].pluck('id')).to include(agent.id, outsider.id, admin.id)
     expect(body['teams'].find { |t| t['id'] == team.id }['member_ids']).to eq([agent.id])
   end
+
+  describe 'pinning and manual order' do
+    let!(:first) { create(:conversation, account: account, inbox: inbox, assignee: agent) }
+    let!(:second) { create(:conversation, account: account, inbox: inbox, assignee: agent) }
+
+    def card(id)
+      get board_url, headers: admin.create_new_auth_token, as: :json
+      response.parsed_body['conversations'].find { |c| c['id'] == id }
+    end
+
+    it 'pins a card and unpins it once the conversation changes column' do
+      post "#{board_url}/pin", params: { conversation_id: first.display_id, pinned: true },
+                               headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(card(first.display_id)['pinned']).to be(true)
+
+      first.update!(assignee: admin)
+      expect(card(first.display_id)['pinned']).to be(false)
+    end
+
+    it 'saves the order of a column' do
+      post "#{board_url}/reorder", params: { conversation_ids: [second.display_id, first.display_id] },
+                                   headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+
+      expect(card(second.display_id)['position']).to eq(0)
+      expect(card(first.display_id)['position']).to eq(1)
+    end
+
+    it 'does not let agents pin conversations they cannot see' do
+      hidden = create(:conversation, account: account, inbox: other_inbox)
+      post "#{board_url}/pin", params: { conversation_id: hidden.display_id, pinned: true },
+                               headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
+  end
 end

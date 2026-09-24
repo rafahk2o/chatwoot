@@ -3,7 +3,9 @@
 // column reassigns the conversation through the regular assignments endpoint.
 // Column order: the current user's own conversations, then the unassigned
 // ones, then everyone else. Clicking a card opens the conversation in a modal
-// so the agent can reply and resolve without leaving the board.
+// so the agent can reply and resolve without leaving the board. Cards can be
+// pinned to the top of their column and reordered by dragging within it; the
+// order is saved on the server and shared by everyone.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -81,6 +83,13 @@ const matchesSearch = conversation => {
 const columnKeyFor = conversation =>
   conversation.assignee_id ? String(conversation.assignee_id) : UNASSIGNED;
 
+// Pinned first, then the saved manual order, then the most recent activity
+// (the order the API returns them in).
+const byBoardOrder = (a, b) =>
+  Number(!!b.pinned) - Number(!!a.pinned) ||
+  (a.position ?? Infinity) - (b.position ?? Infinity) ||
+  a.fetchIndex - b.fetchIndex;
+
 // vuedraggable needs plain mutable arrays per column; rebuild them from the
 // fetched conversations whenever the data or the search changes.
 const rebuildColumns = () => {
@@ -88,6 +97,7 @@ const rebuildColumns = () => {
   conversations.value.filter(matchesSearch).forEach(conversation => {
     grouped[columnKeyFor(conversation)]?.push(conversation);
   });
+  Object.values(grouped).forEach(cards => cards.sort(byBoardOrder));
   columnCards.value = grouped;
 };
 
@@ -98,7 +108,10 @@ const fetchBoard = async () => {
     teams.value = data.teams;
     agents.value = data.agents;
     directory.value = data.directory;
-    conversations.value = data.conversations;
+    conversations.value = data.conversations.map((conversation, index) => ({
+      ...conversation,
+      fetchIndex: index,
+    }));
     truncated.value = data.truncated;
     hasError.value = false;
   } catch {
@@ -160,6 +173,9 @@ const transfer = async (conversation, agent) => {
       agentId: agent ? agent.id : null,
     });
     conversation.assignee_id = agent ? agent.id : null;
+    // A saved position belongs to the old column.
+    conversation.pinned = false;
+    conversation.position = null;
     useAlert(
       agent
         ? t('CONVERSATION_BOARD.TRANSFERRED', {
@@ -175,9 +191,50 @@ const transfer = async (conversation, agent) => {
   }
 };
 
+const saveColumnOrder = async columnKey => {
+  if (search.value.trim()) {
+    // A filtered column is only part of the queue; its order can't be saved.
+    useAlert(t('CONVERSATION_BOARD.ORDER.CLEAR_SEARCH'));
+    rebuildColumns();
+    return;
+  }
+  // Pinning only changes through the pin button: pinned cards stay on top,
+  // and the drag sets the order inside the pinned and unpinned groups.
+  const cards = [...(columnCards.value[columnKey] || [])].sort(
+    (a, b) => Number(!!b.pinned) - Number(!!a.pinned)
+  );
+  cards.forEach((card, index) => {
+    card.position = index;
+  });
+  rebuildColumns();
+  try {
+    await ConversationBoardAPI.reorder({
+      conversationIds: cards.map(card => card.id),
+    });
+  } catch {
+    useAlert(t('CONVERSATION_BOARD.ORDER.ERROR'));
+    fetchBoard();
+  }
+};
+
 const onColumnChange = (columnKey, event) => {
   if (event.added) {
     transfer(event.added.element, directoryById.value[columnKey] || null);
+  } else if (event.moved) {
+    saveColumnOrder(columnKey);
+  }
+};
+
+const togglePin = async conversation => {
+  const pinned = !conversation.pinned;
+  conversation.pinned = pinned;
+  rebuildColumns();
+  try {
+    await ConversationBoardAPI.pin({ conversationId: conversation.id, pinned });
+  } catch {
+    conversation.pinned = !pinned;
+    rebuildColumns();
+    useAlert(t('CONVERSATION_BOARD.ORDER.ERROR'));
   }
 };
 
@@ -201,6 +258,15 @@ const openFullConversation = conversationId => {
 };
 
 const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
+
+// The TV mode runs full screen on a wall monitor; open it in its own tab.
+const openTvMode = () => {
+  const { href } = router.resolve({
+    name: 'conversation_board_tv',
+    params: { accountId: route.params.accountId },
+  });
+  window.open(href, '_blank', 'noopener');
+};
 </script>
 
 <template>
@@ -223,6 +289,14 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
           {{ team.name }}
         </option>
       </select>
+      <Button
+        icon="i-lucide-monitor"
+        size="sm"
+        variant="faded"
+        color="slate"
+        :label="t('CONVERSATION_BOARD.TV.BUTTON')"
+        @click="openTvMode"
+      />
       <Button
         icon="i-lucide-refresh-cw"
         size="sm"
@@ -305,7 +379,8 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
           <template #item="{ element }">
             <button
               type="button"
-              class="flex flex-col gap-1.5 p-3 text-start rounded-lg bg-n-solid-2 border border-n-weak hover:border-n-slate-7 cursor-grab active:cursor-grabbing"
+              class="flex flex-col gap-1.5 p-3 text-start rounded-lg bg-n-solid-2 border hover:border-n-slate-7 cursor-grab active:cursor-grabbing"
+              :class="element.pinned ? 'border-n-amber-8' : 'border-n-weak'"
               @click="openConversation(element)"
             >
               <div class="flex items-center w-full gap-2">
@@ -323,6 +398,18 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
                 <span class="text-xs text-n-slate-10 shrink-0">
                   {{ timeAgo(element.last_activity_at) }}
                 </span>
+                <Button
+                  :icon="element.pinned ? 'i-lucide-pin-off' : 'i-lucide-pin'"
+                  size="xs"
+                  variant="ghost"
+                  :color="element.pinned ? 'amber' : 'slate'"
+                  :title="
+                    element.pinned
+                      ? t('CONVERSATION_BOARD.ORDER.UNPIN')
+                      : t('CONVERSATION_BOARD.ORDER.PIN')
+                  "
+                  @click.stop="togglePin(element)"
+                />
                 <Button
                   icon="i-lucide-arrow-right-left"
                   size="xs"

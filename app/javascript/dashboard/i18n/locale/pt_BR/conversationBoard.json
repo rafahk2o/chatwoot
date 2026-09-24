@@ -34,6 +34,32 @@
       "OPEN_FULL": "Abrir na tela de conversas",
       "CLOSE": "Fechar",
       "LOAD_ERROR": "Não foi possível abrir a conversa"
+    },
+    "ORDER": {
+      "PIN": "Fixar no topo",
+      "UNPIN": "Desafixar",
+      "ERROR": "Não foi possível salvar a ordem do quadro",
+      "CLEAR_SEARCH": "Limpe a busca para reordenar a coluna"
+    },
+    "TV": {
+      "BUTTON": "Modo TV",
+      "TITLE": "Painel da operação",
+      "OPEN": "Abertas",
+      "PENDING": "Pendentes",
+      "WAITING": "Aguardando resposta",
+      "LONGEST_WAIT": "Maior espera",
+      "UNASSIGNED": "Sem responsável",
+      "NO_TEAM": "Sem setor",
+      "TEAM_SUMMARY": "{total} conversas · {waiting} aguardando",
+      "AGENT_WAITING": "{count} aguard. · {time}",
+      "ALERTS": "Alertas",
+      "NO_ALERTS": "Tudo em dia",
+      "ALERT_UNASSIGNED": "{count} conversas sem responsável (espera máxima: {time})",
+      "ALERT_WAIT": "{team}: {count} aguardando há mais de {minutes} min",
+      "ALERT_CAPACITY": "{name}: {count} conversas (limite {limit})",
+      "UPDATED": "Atualizado às {time}",
+      "OFFLINE": "Sem conexão, tentando de novo...",
+      "FULLSCREEN": "Tela cheia"
     }
   }
 }
