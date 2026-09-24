@@ -106,7 +106,8 @@ defineExpose({ open });
       conversation
         ? t('CONVERSATION_BOARD.MOVE.DESCRIPTION', {
             id: conversation.id,
-            name: conversation.contact.name || conversation.contact.phone_number,
+            name:
+              conversation.contact.name || conversation.contact.phone_number,
           })
         : ''
     "
