@@ -57,7 +57,8 @@ RSpec.describe 'Conversation board API', type: :request do
 
     expect(ids).to contain_exactly(team_card.display_id, unassigned_in_team_inbox.display_id)
     body = response.parsed_body
-    expect(body['agents'].pluck('id')).to eq([agent.id])
+    # The viewer keeps their own column even outside the team
+    expect(body['agents'].pluck('id')).to contain_exactly(admin.id, agent.id)
     # The move dialog can still reach agents outside the selected team
     expect(body['directory'].pluck('id')).to include(agent.id, outsider.id, admin.id)
     expect(body['teams'].find { |t| t['id'] == team.id }['member_ids']).to eq([agent.id])

@@ -6,6 +6,8 @@
 # and pending conversations the current user can see, assigned to one of those
 # agents or unassigned in an inbox they work in. `directory` lists every agent
 # and `teams` their members, so a card can be moved to any team from a dialog.
+# The current user's column is always included, even when a team filter leaves
+# them out, so everyone keeps their own conversations first on the board.
 class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseController
   STATUSES = %w[open pending].freeze
   LIMIT = 1500
@@ -36,7 +38,7 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
   def agents
     return all_agents unless team
 
-    @agents ||= all_agents.select { |agent| team_member_ids.include?(agent.id) }
+    @agents ||= all_agents.select { |agent| team_member_ids.include?(agent.id) || agent.id == Current.user.id }
   end
 
   def team_member_ids
@@ -64,7 +66,8 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
     scope = Conversations::PermissionFilterService.new(Current.account.conversations, Current.user, Current.account).perform
     scope = scope.where(status: STATUSES)
     if team
-      team_inbox_ids = agents.flat_map { |agent| inbox_ids_by_agent.fetch(agent.id, []) }.uniq
+      team_inbox_ids = agents.reject { |agent| agent.id == Current.user.id && team_member_ids.exclude?(agent.id) }
+                             .flat_map { |agent| inbox_ids_by_agent.fetch(agent.id, []) }.uniq
       scope = scope.where(assignee_id: agents.map(&:id)).or(scope.where(assignee_id: nil, inbox_id: team_inbox_ids))
     end
     scope.includes(:contact, :inbox).order(last_activity_at: :desc).limit(LIMIT)
