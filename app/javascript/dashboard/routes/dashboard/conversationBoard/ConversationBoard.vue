@@ -1,12 +1,16 @@
 <script setup>
 // Melck fork: Kanban with one column per agent. Dragging a card to another
 // column reassigns the conversation through the regular assignments endpoint.
+// Column order: the current user's own conversations, then the unassigned
+// ones, then everyone else. Clicking a card opens the conversation in a modal
+// so the agent can reply and resolve without leaving the board.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import Draggable from 'vuedraggable';
 import { debounce } from '@chatwoot/utils';
 import { useAlert } from 'dashboard/composables';
+import { useMapGetter } from 'dashboard/composables/store';
 import { emitter } from 'shared/helpers/mitt';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 import ConversationBoardAPI from 'dashboard/api/conversationBoard';
@@ -14,6 +18,7 @@ import ConversationAPI from 'dashboard/api/inbox/conversation';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import MoveConversationDialog from './MoveConversationDialog.vue';
+import ConversationModal from './ConversationModal.vue';
 
 const UNASSIGNED = 'unassigned';
 const TEAM_STORAGE_KEY = 'melck.conversationBoard.teamId';
@@ -22,6 +27,7 @@ const POLL_INTERVAL = 60000;
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const currentUserId = useMapGetter('getCurrentUserID');
 
 const readStoredTeam = () => {
   try {
@@ -35,6 +41,7 @@ const teams = ref([]);
 const agents = ref([]);
 const directory = ref([]);
 const moveDialogRef = ref(null);
+const conversationModalRef = ref(null);
 const conversations = ref([]);
 const truncated = ref(false);
 const teamId = ref(readStoredTeam());
@@ -50,10 +57,15 @@ const directoryById = computed(() =>
   Object.fromEntries(directory.value.map(agent => [agent.id, agent]))
 );
 
-const columns = computed(() => [
-  { key: UNASSIGNED, agent: null },
-  ...agents.value.map(agent => ({ key: String(agent.id), agent })),
-]);
+const columns = computed(() => {
+  const mine = agents.value.find(agent => agent.id === currentUserId.value);
+  const others = agents.value.filter(agent => agent !== mine);
+  return [
+    ...(mine ? [{ key: String(mine.id), agent: mine, isMine: true }] : []),
+    { key: UNASSIGNED, agent: null },
+    ...others.map(agent => ({ key: String(agent.id), agent })),
+  ];
+});
 
 const matchesSearch = conversation => {
   const query = search.value.trim().toLowerCase();
@@ -172,12 +184,18 @@ const onColumnChange = (columnKey, event) => {
 const openMoveDialog = conversation => moveDialogRef.value?.open(conversation);
 const onMove = ({ conversation, agent }) => transfer(conversation, agent);
 
-const openConversation = conversation => {
+const openConversation = conversation =>
+  conversationModalRef.value?.open(conversation.id);
+
+// Reply, resolve or reassign inside the modal: bring the board up to date.
+const onModalClose = () => fetchBoard();
+
+const openFullConversation = conversationId => {
   router.push({
     name: 'inbox_conversation',
     params: {
       accountId: route.params.accountId,
-      conversation_id: conversation.id,
+      conversation_id: conversationId,
     },
   });
 };
@@ -236,7 +254,8 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
       <div
         v-for="column in columns"
         :key="column.key"
-        class="flex flex-col w-72 shrink-0 max-h-full rounded-xl bg-n-alpha-1 border border-n-weak"
+        class="flex flex-col w-72 shrink-0 max-h-full rounded-xl bg-n-alpha-1 border"
+        :class="column.isMine ? 'border-n-brand/40' : 'border-n-weak'"
       >
         <div class="flex items-center gap-2 px-3 py-2.5">
           <Avatar
@@ -257,6 +276,12 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
                 ? column.agent.name
                 : t('CONVERSATION_BOARD.UNASSIGNED')
             }}
+          </span>
+          <span
+            v-if="column.isMine"
+            class="px-1.5 text-xs rounded-md bg-n-brand/10 text-n-blue-11 shrink-0"
+          >
+            {{ t('CONVERSATION_BOARD.MINE') }}
           </span>
           <span
             class="px-1.5 ms-auto text-xs rounded-md bg-n-alpha-2 text-n-slate-11"
@@ -364,6 +389,11 @@ const timeAgo = seconds => shortTimestamp(dynamicTime(seconds));
       :directory="directory"
       :default-team-id="teamId"
       @move="onMove"
+    />
+    <ConversationModal
+      ref="conversationModalRef"
+      @close="onModalClose"
+      @open-full="openFullConversation"
     />
   </section>
 </template>

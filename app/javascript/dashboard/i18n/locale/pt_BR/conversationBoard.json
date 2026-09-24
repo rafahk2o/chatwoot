@@ -27,6 +27,13 @@
       "CURRENT": "(atual)",
       "NOT_MEMBER": "(não participa de {inbox})",
       "CONFIRM": "Mover"
+    },
+    "MINE": "Minhas",
+    "MODAL": {
+      "TITLE": "Conversa #{id}",
+      "OPEN_FULL": "Abrir na tela de conversas",
+      "CLOSE": "Fechar",
+      "LOAD_ERROR": "Não foi possível abrir a conversa"
     }
   }
 }

@@ -27,6 +27,13 @@
       "CURRENT": "(current)",
       "NOT_MEMBER": "(not in {inbox})",
       "CONFIRM": "Move"
+    },
+    "MINE": "Mine",
+    "MODAL": {
+      "TITLE": "Conversation #{id}",
+      "OPEN_FULL": "Open in conversations view",
+      "CLOSE": "Close",
+      "LOAD_ERROR": "Could not open the conversation"
     }
   }
 }
