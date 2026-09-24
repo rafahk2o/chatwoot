@@ -59,7 +59,7 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
       name: agent.available_name,
       thumbnail: agent.avatar_url,
       role: account_user&.role,
-      availability_status: account_user&.availability_status,
+      availability_status: account_user&.availability,
       inbox_ids: inbox_ids_by_agent.fetch(agent.id, [])
     }
   end
@@ -95,7 +95,7 @@ class Api::V1::Accounts::ConversationBoardsController < Api::V1::Accounts::BaseC
 
     Message.where(conversation_id: conversation_ids, message_type: %i[incoming outgoing], private: false)
            .select('DISTINCT ON (conversation_id) conversation_id, content, message_type, created_at')
-           .order(:conversation_id, created_at: :desc)
+           .reorder(:conversation_id, created_at: :desc) # Message has a default created_at ASC order
            .index_by(&:conversation_id)
   end
 end
