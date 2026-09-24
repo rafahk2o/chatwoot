@@ -1,0 +1,20 @@
+{
+  "CONVERSATION_BOARD": {
+    "TITLE": "Conversation board",
+    "SIDEBAR": "Board",
+    "ALL_TEAMS": "All teams",
+    "SEARCH": "Filter by name or phone",
+    "REFRESH": "Refresh",
+    "UNASSIGNED": "Unassigned",
+    "EMPTY_COLUMN": "No conversations",
+    "LOADING": "Loading conversations...",
+    "LOAD_ERROR": "Could not load the board",
+    "TRUNCATED": "Showing the {count} most recent conversations",
+    "PENDING": "Pending",
+    "WAITING": "Waiting for reply",
+    "TRANSFERRED": "Conversation #{id} transferred to {name}",
+    "UNASSIGNED_DONE": "Conversation #{id} is now unassigned",
+    "TRANSFER_ERROR": "Could not transfer conversation #{id}",
+    "NOT_INBOX_MEMBER": "{name} is not a member of the {inbox} inbox"
+  }
+}

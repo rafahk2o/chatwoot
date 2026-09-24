@@ -1,0 +1,20 @@
+{
+  "CONVERSATION_BOARD": {
+    "TITLE": "Quadro de conversas",
+    "SIDEBAR": "Quadro",
+    "ALL_TEAMS": "Todos os times",
+    "SEARCH": "Filtrar por nome ou telefone",
+    "REFRESH": "Atualizar",
+    "UNASSIGNED": "Sem responsável",
+    "EMPTY_COLUMN": "Nenhuma conversa",
+    "LOADING": "Carregando conversas...",
+    "LOAD_ERROR": "Não foi possível carregar o quadro",
+    "TRUNCATED": "Mostrando as {count} conversas mais recentes",
+    "PENDING": "Pendente",
+    "WAITING": "Aguardando resposta",
+    "TRANSFERRED": "Conversa #{id} transferida para {name}",
+    "UNASSIGNED_DONE": "Conversa #{id} ficou sem responsável",
+    "TRANSFER_ERROR": "Não foi possível transferir a conversa #{id}",
+    "NOT_INBOX_MEMBER": "{name} não participa da caixa {inbox}"
+  }
+}

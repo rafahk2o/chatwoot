@@ -158,6 +158,7 @@ Rails.application.routes.draw do
           namespace :channels do
             resource :twilio_channel, only: [:create]
           end
+          resource :conversation_board, only: [:show] # Melck fork: Kanban by agent
           resources :conversations, only: [:index, :create, :show, :update, :destroy] do
             collection do
               get :meta
