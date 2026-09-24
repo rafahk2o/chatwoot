@@ -15,6 +15,18 @@
     "TRANSFERRED": "Conversa #{id} transferida para {name}",
     "UNASSIGNED_DONE": "Conversa #{id} ficou sem responsável",
     "TRANSFER_ERROR": "Não foi possível transferir a conversa #{id}",
-    "NOT_INBOX_MEMBER": "{name} não participa da caixa {inbox}"
+    "NOT_INBOX_MEMBER": "{name} não participa da caixa {inbox}",
+    "MOVE": {
+      "BUTTON": "Mover para outro atendente",
+      "TITLE": "Mover conversa",
+      "DESCRIPTION": "Conversa #{id} com {name}: escolha o setor e o atendente de destino.",
+      "TEAM": "Setor",
+      "ALL_TEAMS": "Todos os setores",
+      "AGENT": "Atendente",
+      "SELECT_AGENT": "Selecione o atendente",
+      "CURRENT": "(atual)",
+      "NOT_MEMBER": "(não participa de {inbox})",
+      "CONFIRM": "Mover"
+    }
   }
 }

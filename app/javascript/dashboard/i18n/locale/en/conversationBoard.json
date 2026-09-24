@@ -15,6 +15,18 @@
     "TRANSFERRED": "Conversation #{id} transferred to {name}",
     "UNASSIGNED_DONE": "Conversation #{id} is now unassigned",
     "TRANSFER_ERROR": "Could not transfer conversation #{id}",
-    "NOT_INBOX_MEMBER": "{name} is not a member of the {inbox} inbox"
+    "NOT_INBOX_MEMBER": "{name} is not a member of the {inbox} inbox",
+    "MOVE": {
+      "BUTTON": "Move to another agent",
+      "TITLE": "Move conversation",
+      "DESCRIPTION": "Conversation #{id} with {name}: choose the destination team and agent.",
+      "TEAM": "Team",
+      "ALL_TEAMS": "All teams",
+      "AGENT": "Agent",
+      "SELECT_AGENT": "Select the agent",
+      "CURRENT": "(current)",
+      "NOT_MEMBER": "(not in {inbox})",
+      "CONFIRM": "Move"
+    }
   }
 }
