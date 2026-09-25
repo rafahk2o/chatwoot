@@ -3,9 +3,9 @@
 // column reassigns the conversation through the regular assignments endpoint.
 // Column order: the current user's own conversations, then the unassigned
 // ones, then everyone else. Clicking a card opens the conversation in a modal
-// so the agent can reply and resolve without leaving the board. Cards can be
-// pinned to the top of their column and reordered by dragging within it; the
-// order is saved on the server and shared by everyone.
+// so the agent can reply and resolve without leaving the board. Cards are
+// prioritised by how long the contact has been waiting for a reply; pinned
+// cards sit above them in a manual order shared by everyone.
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -83,12 +83,21 @@ const matchesSearch = conversation => {
 const columnKeyFor = conversation =>
   conversation.assignee_id ? String(conversation.assignee_id) : UNASSIGNED;
 
-// Pinned first, then the saved manual order, then the most recent activity
-// (the order the API returns them in).
-const byBoardOrder = (a, b) =>
-  Number(!!b.pinned) - Number(!!a.pinned) ||
-  (a.position ?? Infinity) - (b.position ?? Infinity) ||
-  a.fetchIndex - b.fetchIndex;
+// Pinned cards first, in their manual order. Then the longest wait for a
+// reply on top, and last the cards nobody is waiting on, most recent activity
+// first (the order the API returns them in).
+const byBoardOrder = (a, b) => {
+  if (a.pinned || b.pinned) {
+    return (
+      Number(!!b.pinned) - Number(!!a.pinned) ||
+      (a.position ?? Infinity) - (b.position ?? Infinity)
+    );
+  }
+  return (
+    (a.waiting_since ?? Infinity) - (b.waiting_since ?? Infinity) ||
+    a.fetchIndex - b.fetchIndex
+  );
+};
 
 // vuedraggable needs plain mutable arrays per column; rebuild them from the
 // fetched conversations whenever the data or the search changes.
@@ -198,15 +207,16 @@ const saveColumnOrder = async columnKey => {
     rebuildColumns();
     return;
   }
-  // Pinning only changes through the pin button: pinned cards stay on top,
-  // and the drag sets the order inside the pinned and unpinned groups.
-  const cards = [...(columnCards.value[columnKey] || [])].sort(
-    (a, b) => Number(!!b.pinned) - Number(!!a.pinned)
+  // Only pinned cards keep a manual order; the rest follow the waiting time,
+  // so an unpinned card dragged elsewhere goes back to its place.
+  const cards = (columnCards.value[columnKey] || []).filter(
+    card => card.pinned
   );
   cards.forEach((card, index) => {
     card.position = index;
   });
   rebuildColumns();
+  if (!cards.length) return;
   try {
     await ConversationBoardAPI.reorder({
       conversationIds: cards.map(card => card.id),
