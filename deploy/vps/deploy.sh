@@ -12,16 +12,19 @@ cd "$(dirname "$0")"
 
 docker pull "$IMAGE"
 
-export CHATWOOT_IMAGE="$IMAGE" APP_PORT
+# Only this setting is read from .env: its other values may hold spaces or
+# brackets that a shell `source` would mangle.
+TRAEFIK_ENABLE=$(sed -n 's/^TRAEFIK_ENABLE=//p' .env | tail -n1)
+export CHATWOOT_IMAGE="$IMAGE" APP_PORT TRAEFIK_ENABLE="${TRAEFIK_ENABLE:-false}"
 docker stack deploy --with-registry-auth --detach=true -c stack.yml "$STACK"
 
 echo "Waiting for ${STACK}_app to run $IMAGE and answer on :$APP_PORT..."
 for _ in $(seq 1 90); do
   running=$(docker service ps "${STACK}_app" --filter desired-state=running --format '{{.Image}} {{.CurrentState}}' | head -n1)
   # Swarm may append @sha256:<digest> to the image name.
-  if [[ "$running" == "$IMAGE"* && "$running" == *" Running "* ]] && curl -fsS "http://127.0.0.1:${APP_PORT}/api" >/dev/null 2>&1; then
+  if [[ "$running" == "$IMAGE"* && "$running" == *" Running "* ]] && curl -fsS -H 'X-Forwarded-Proto: https' "http://127.0.0.1:${APP_PORT}/api" >/dev/null 2>&1; then
     echo "Deploy OK: $running"
-    curl -fsS "http://127.0.0.1:${APP_PORT}/api"; echo
+    curl -fsS -H 'X-Forwarded-Proto: https' "http://127.0.0.1:${APP_PORT}/api"; echo
     exit 0
   fi
   sleep 10

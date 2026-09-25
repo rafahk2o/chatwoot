@@ -6,6 +6,14 @@
 # Stop v2 app/sidekiq first:  docker service scale chatwoot_v2_app=0 chatwoot_v2_sidekiq=0
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Since the cutover this stack IS production: syncing would replace its data
+# with the stale legacy database.
+if grep -q '^TRAEFIK_ENABLE=true' .env 2>/dev/null && [ "${I_KNOW_THIS_OVERWRITES_PRODUCTION:-}" != "yes" ]; then
+  echo "Refusing to run: chatwoot_v2 is serving app.melck.app (TRAEFIK_ENABLE=true)." >&2
+  echo "This would overwrite production with the legacy database." >&2
+  exit 1
+fi
 mkdir -p dump
 
 SRC=$(docker ps -qf name=pgvector_pgvector | head -n1)
