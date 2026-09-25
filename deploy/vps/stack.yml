@@ -1,6 +1,10 @@
-# Parallel Chatwoot install on the VPS (Docker Swarm stack "chatwoot_v2").
-# Fully isolated from the existing "chatwoot" stack: own Postgres, Redis,
-# volumes and network. Deployed by .github/workflows/deploy_vps.yml via deploy.sh.
+# Chatwoot on the VPS (Docker Swarm stack "chatwoot_v2"), deployed by
+# .github/workflows/deploy_vps.yml via deploy.sh. Own Postgres, Redis and
+# volumes, apart from the legacy "chatwoot" stack.
+#
+# The public domain goes through the shared Traefik on the "Melck" network. The
+# route is off unless the server's .env sets TRAEFIK_ENABLE=true (deploy.sh
+# exports it), so merging stack changes never moves the domain by itself.
 version: '3.8'
 
 x-chatwoot: &chatwoot
@@ -16,6 +20,9 @@ services:
     <<: *chatwoot
     entrypoint: docker/entrypoints/rails.sh
     command: sh -c "bundle exec rails db:chatwoot_prepare && bundle exec rails s -p 3000 -b 0.0.0.0"
+    networks:
+      - internal
+      - Melck
     ports:
       - target: 3000
         published: ${APP_PORT:-3001}
@@ -25,6 +32,19 @@ services:
       update_config:
         order: stop-first
         failure_action: pause
+      labels:
+        - traefik.enable=${TRAEFIK_ENABLE:-false}
+        - traefik.swarm.network=Melck
+        - traefik.http.routers.chatwoot_v2_app.rule=Host(`${APP_HOST:-app.melck.app}`)
+        - traefik.http.routers.chatwoot_v2_app.entrypoints=websecure
+        - traefik.http.routers.chatwoot_v2_app.tls.certresolver=letsencryptresolver
+        # Above the legacy stack's router (priority 1) while both exist.
+        - traefik.http.routers.chatwoot_v2_app.priority=100
+        - traefik.http.routers.chatwoot_v2_app.service=chatwoot_v2_app
+        - traefik.http.routers.chatwoot_v2_app.middlewares=chatwoot_v2_https_header
+        - traefik.http.middlewares.chatwoot_v2_https_header.headers.customrequestheaders.X-Forwarded-Proto=https
+        - traefik.http.services.chatwoot_v2_app.loadbalancer.server.port=3000
+        - traefik.http.services.chatwoot_v2_app.loadbalancer.passHostHeader=true
       resources:
         limits:
           cpus: '2'
@@ -68,3 +88,5 @@ networks:
   internal:
     driver: overlay
     attachable: true
+  Melck:
+    external: true
