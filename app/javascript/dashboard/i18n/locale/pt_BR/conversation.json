@@ -243,6 +243,9 @@
       "OPEN_IN_NEW_TAB": "Abrir em nova aba",
       "COPY_LINK": "Copiar link da conversa",
       "COPY_LINK_SUCCESS": "Link da conversa copiado",
+      "PIN": "Fixar no topo",
+      "UNPIN": "Desafixar",
+      "PIN_ERROR": "Não foi possível fixar a conversa, tente novamente",
       "API": {
         "AGENT_ASSIGNMENT": {
           "SUCCESFUL": "ID da conversa {conversationId} atribuído para \"{agentName}\"",

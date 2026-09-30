@@ -162,6 +162,7 @@ Rails.application.routes.draw do
             post :pin
             post :reorder
           end
+          resources :conversation_pins, only: [:index, :create, :destroy] # Melck fork: per-user pinned conversations
           resources :conversations, only: [:index, :create, :show, :update, :destroy] do
             collection do
               get :meta
