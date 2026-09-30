@@ -190,6 +190,10 @@ class ConversationFinder
     params[:page] || 1
   end
 
+  def pinned_conversation_ids
+    ConversationPin.where(account_id: current_account.id, user_id: current_user.id).select(:conversation_id)
+  end
+
   def conversations_base_query
     @conversations.includes(
       :taggings, :team, :contact_inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }
@@ -198,6 +202,8 @@ class ConversationFinder
 
   def conversations
     @conversations = conversations_base_query
+    # Melck fork: the user's pinned conversations come first, so they land on the first page.
+    @conversations = @conversations.order(Arel.sql("conversations.id IN (#{pinned_conversation_ids.to_sql}) DESC"))
     @conversations = Conversations::SortService.apply(@conversations, params[:sort_by])
 
     if params[:updated_within].present?

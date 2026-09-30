@@ -23,6 +23,7 @@ const props = defineProps({
   showAssignee: { type: Boolean, default: false },
   showInboxName: { type: Boolean, default: false },
   isInboxView: { type: Boolean, default: false },
+  pinned: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -180,6 +181,12 @@ const selectedModel = computed({
       <div v-if="hasSlaPolicyId" class="flex-shrink-0">
         <SLACardLabel ref="slaCardLabel" :chat="chat" />
       </div>
+
+      <Icon
+        v-if="pinned"
+        icon="i-lucide-pin"
+        class="size-3.5 text-n-amber-11 flex-shrink-0"
+      />
 
       <div class="flex-shrink-0 w-[4.375rem] text-end">
         <TimeAgo

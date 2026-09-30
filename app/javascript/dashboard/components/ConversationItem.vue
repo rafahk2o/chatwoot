@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useAlert } from 'dashboard/composables';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
 import ConversationCard from './widgets/conversation/ConversationCard.vue';
 import ConversationCardExpanded from 'dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue';
@@ -20,6 +22,7 @@ const props = defineProps({
 
 const router = useRouter();
 const store = useStore();
+const { t } = useI18n();
 
 const selectConversation = inject('selectConversation');
 const deSelectConversation = inject('deSelectConversation');
@@ -65,6 +68,9 @@ const currentContact = computed(() =>
 );
 
 const isActiveChat = computed(() => currentChat.value.id === props.source.id);
+const isPinned = computed(() =>
+  store.getters['conversationPins/isPinned'](props.source.id)
+);
 
 const inbox = computed(() => {
   const inboxId = props.source.inbox_id;
@@ -172,6 +178,15 @@ const onAssignPriority = priority => {
   closeContextMenu();
 };
 
+const onTogglePin = async () => {
+  closeContextMenu();
+  try {
+    await store.dispatch('conversationPins/toggle', props.source.id);
+  } catch {
+    useAlert(t('CONVERSATION.CARD_CONTEXT_MENU.PIN_ERROR'));
+  }
+};
+
 const onDeleteConversation = () => {
   deleteConversation(props.source.id);
   closeContextMenu();
@@ -191,6 +206,7 @@ const onDeleteConversation = () => {
     :show-assignee="showAssigneeForExpandedCard"
     :show-inbox-name="showInboxName"
     :is-inbox-view="isInboxView"
+    :pinned="isPinned"
     @select-conversation="onExpandedSelect"
     @de-select-conversation="onExpandedSelect"
     @click="onCardClick"
@@ -208,6 +224,7 @@ const onDeleteConversation = () => {
     :is-active-chat="isActiveChat"
     :show-assignee="showAssignee"
     :show-inbox-name="showInboxName"
+    :pinned="isPinned"
     @click="onCardClick"
     @contextmenu="openContextMenu"
     @select-conversation="selectConversation"
@@ -229,6 +246,7 @@ const onDeleteConversation = () => {
       :has-unread-messages="source.unread_count > 0"
       :conversation-labels="source.labels"
       :conversation-url="conversationPath"
+      :pinned="isPinned"
       @update-conversation="onUpdateConversation"
       @assign-agent="onAssignAgent"
       @assign-label="onAssignLabel"
@@ -238,6 +256,7 @@ const onDeleteConversation = () => {
       @mark-as-read="onMarkAsRead"
       @assign-priority="onAssignPriority"
       @delete-conversation="onDeleteConversation"
+      @toggle-pin="onTogglePin"
       @close="closeContextMenu"
     />
   </ContextMenu>

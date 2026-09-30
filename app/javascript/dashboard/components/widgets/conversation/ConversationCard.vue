@@ -24,6 +24,7 @@ const props = defineProps({
   showInboxName: { type: Boolean, default: false },
   hideThumbnail: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
+  pinned: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -217,7 +218,14 @@ watch(
         class="absolute flex flex-col ltr:right-3 rtl:left-3"
         :class="showMetaSection ? 'top-8' : 'top-4'"
       >
-        <span class="ml-auto font-normal leading-4 text-xxs">
+        <span
+          class="ml-auto font-normal leading-4 text-xxs inline-flex items-center gap-1"
+        >
+          <Icon
+            v-if="pinned"
+            icon="i-lucide-pin"
+            class="size-3 text-n-amber-11 flex-shrink-0"
+          />
           <TimeAgo
             :last-activity-timestamp="chat.timestamp"
             :created-at-timestamp="chat.created_at"

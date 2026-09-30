@@ -92,6 +92,7 @@ const mineChatsList = useMapGetter('getMineChats');
 const allChatList = useMapGetter('getAllStatusChats');
 const unAssignedChatsList = useMapGetter('getUnAssignedChats');
 const participatingChatsList = useMapGetter('getParticipatingChats');
+const isPinned = useMapGetter('conversationPins/isPinned');
 const chatListLoading = useMapGetter('getChatListLoadingStatus');
 const activeInbox = useMapGetter('getSelectedInbox');
 const conversationStats = useMapGetter('conversationStats/getStats');
@@ -347,7 +348,10 @@ const conversationList = computed(() => {
     localConversationList = sortByUnreadStatus(localConversationList);
   }
 
-  return localConversationList;
+  // Melck fork: the user's pinned conversations stay on top, keeping the chosen order.
+  return localConversationList.sort(
+    (a, b) => Number(isPinned.value(b.id)) - Number(isPinned.value(a.id))
+  );
 });
 
 const showEndOfListMessage = computed(() => {
@@ -806,6 +810,7 @@ onMounted(() => {
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
+  store.dispatch('conversationPins/fetch');
   if (hasActiveFolders.value) {
     store.dispatch('campaigns/get');
   }
