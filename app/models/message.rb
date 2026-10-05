@@ -44,6 +44,8 @@ class Message < ApplicationRecord
   include MessageFilterHelpers
   include Liquidable
   NUMBER_OF_PERMITTED_ATTACHMENTS = 15
+  # A contact reply after this window, or while the agent is offline, reopens the conversation unassigned.
+  ASSIGNEE_RETENTION_AFTER_RESOLVE = 30.minutes
 
   TEMPLATE_PARAMS_SCHEMA = {
     'type': 'object',
@@ -406,8 +408,19 @@ class Message < ApplicationRecord
     return unless incoming?
 
     conversation.open! if conversation.snoozed?
+    return unless conversation.resolved?
 
-    reopen_resolved_conversation if conversation.resolved?
+    conversation.assignee = nil unless assignee_retained_on_reopen?
+    reopen_resolved_conversation
+  end
+
+  def assignee_retained_on_reopen?
+    return true if conversation.assignee_id.blank?
+
+    resolved_at = conversation.status_changed_at
+    return false if resolved_at.blank? || resolved_at < ASSIGNEE_RETENTION_AFTER_RESOLVE.ago
+
+    ::OnlineStatusTracker.get_available_users(account_id)[conversation.assignee_id.to_s] == 'online'
   end
 
   def mark_pending_conversation_as_open_for_human_response
