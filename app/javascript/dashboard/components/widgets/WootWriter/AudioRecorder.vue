@@ -45,10 +45,25 @@ const AUDIO_EXTENSION_MAP = {
   'audio/webm': 'webm',
 };
 
+const AUDIO_BITS_PER_SECOND = 192000;
+
+// Browser voice processing (echo cancellation, noise suppression, auto gain)
+// makes recordings sound muffled, so capture the raw mono signal at 48 kHz.
+const MIC_CONSTRAINTS = {
+  audio: {
+    channelCount: 1,
+    sampleRate: 48000,
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+  },
+};
+
 const getRecordPluginOptions = audioFormat => {
   const options = {
     scrollingWaveform: true,
     renderRecordedAudio: false,
+    audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
   };
   if (
     audioFormat === 'audio/ogg' &&
@@ -125,7 +140,14 @@ const stopRecording = () => {
   }
 };
 
-const startRecording = () => {
+const startRecording = async () => {
+  // The record plugin always opens the mic with `{ audio: true }`, so open it
+  // here with our constraints and hand the stream over to the plugin.
+  const stream = await navigator.mediaDevices.getUserMedia(MIC_CONSTRAINTS);
+  const { onDestroy, onEnd } = record.value.renderMicStream(stream);
+  record.value.once('destroy', onDestroy);
+  record.value.once('record-end', onEnd);
+  record.value.stream = stream;
   record.value.startRecording();
   isRecording.value = true;
 };

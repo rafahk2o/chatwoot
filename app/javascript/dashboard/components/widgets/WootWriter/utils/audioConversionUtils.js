@@ -135,7 +135,7 @@ export const convertToMp3 = async (audioBlob, bitrate = 128) => {
   }
 };
 
-export const convertAudio = async (inputBlob, outputFormat, bitrate = 128) => {
+export const convertAudio = async (inputBlob, outputFormat, bitrate = 192) => {
   let audio;
   if (outputFormat === 'audio/wav') {
     audio = await convertToWav(inputBlob);
