@@ -1,4 +1,4 @@
-class Webhooks::WahaForwardedMessageJob < ApplicationJob
+class Webhooks::WahaMessageAlertJob < ApplicationJob
   queue_as :default
 
   WAHA_CHAT_ID_ATTRIBUTES = %w[waha_whatsapp_chat_id waha_whatsapp_lid waha_whatsapp_jid].freeze
@@ -6,15 +6,15 @@ class Webhooks::WahaForwardedMessageJob < ApplicationJob
   # WAHA's Chatwoot app creates the contact and conversation from its own copy of the event,
   # so they may not exist yet when this job first runs.
   retry_on ActiveRecord::RecordNotFound, wait: 15.seconds, attempts: 4 do |job, error|
-    Rails.logger.warn "WAHA forwarded message alert skipped for #{job.arguments.first}: #{error.message}"
+    Rails.logger.warn "WAHA message alert skipped for #{job.arguments.first}: #{error.message}"
   end
 
-  def perform(chat_ids)
+  def perform(chat_ids, reason)
     conversation = find_contact(chat_ids).conversations.joins(:inbox)
                                          .where(inboxes: { channel_type: 'Channel::Api' })
                                          .order(last_activity_at: :desc).first!
 
-    Messages::MessageBuilder.new(nil, conversation, { content: I18n.t('conversations.messages.waha.forwarded_message'), private: true }).perform
+    Messages::MessageBuilder.new(nil, conversation, { content: I18n.t("conversations.messages.waha.#{reason}"), private: true }).perform
   end
 
   private
