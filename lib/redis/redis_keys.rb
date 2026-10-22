@@ -104,4 +104,7 @@ module Redis::RedisKeys
 
   ## Account Email Rate Limiting
   ACCOUNT_OUTBOUND_EMAIL_COUNT_KEY = 'OUTBOUND_EMAIL_COUNT::%<account_id>d::%<date>s'.freeze
+
+  ## WAHA media fingerprints, used to spot the same file arriving from different contacts
+  WAHA_MEDIA_FINGERPRINT = 'WAHA_MEDIA_FINGERPRINT::%<sha256>s'.freeze
 end
