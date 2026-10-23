@@ -2,6 +2,7 @@ class Webhooks::WahaMessageAlertJob < ApplicationJob
   queue_as :default
 
   WAHA_CHAT_ID_ATTRIBUTES = %w[waha_whatsapp_chat_id waha_whatsapp_lid waha_whatsapp_jid].freeze
+  ALERT_LOCALE = :pt_BR
 
   # WAHA's Chatwoot app creates the contact and conversation from its own copy of the event,
   # so they may not exist yet when this job first runs.
@@ -14,7 +15,8 @@ class Webhooks::WahaMessageAlertJob < ApplicationJob
                                          .where(inboxes: { channel_type: 'Channel::Api' })
                                          .order(last_activity_at: :desc).first!
 
-    Messages::MessageBuilder.new(nil, conversation, { content: I18n.t("conversations.messages.waha.#{reason}"), private: true }).perform
+    content = I18n.with_locale(ALERT_LOCALE) { I18n.t("conversations.messages.waha.#{reason}") }
+    Messages::MessageBuilder.new(nil, conversation, { content: content, private: true }).perform
   end
 
   private

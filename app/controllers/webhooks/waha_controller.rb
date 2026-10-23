@@ -28,13 +28,20 @@ class Webhooks::WahaController < ActionController::API
 
   def alert_reason
     return unless params[:event] == 'message' && !message_data.dig(:Info, :IsGroup)
-    return 'forwarded_message' if message_contents.any? { |content| forwarded?(content[:contextInfo]) }
 
     media = message_contents.find { |content| content[:fileSHA256].present? }
+    duplicate = media.present? && duplicate_media?(media)
+    return 'forwarded_message' if message_contents.any? { |content| forwarded?(content[:contextInfo]) }
+
+    media_alert_reason(media, duplicate)
+  end
+
+  def media_alert_reason(media, duplicate)
     return unless media
     return 'stale_media' if stale_media?(media)
+    return 'cached_media' if cached_media?(media)
 
-    'duplicate_media' if duplicate_media?(media)
+    'duplicate_media' if duplicate
   end
 
   def forwarded?(context)
@@ -46,7 +53,12 @@ class Webhooks::WahaController < ActionController::API
     media[:mediaKeyTimestamp].to_i.positive? && params.dig(:payload, :timestamp).to_i - media[:mediaKeyTimestamp].to_i > STALE_MEDIA_THRESHOLD
   end
 
-  # The same file already received from a different contact.
+  # WhatsApp adds _nc_hot to the media path when it serves a file it already had stored instead of a fresh upload.
+  def cached_media?(media)
+    media[:directPath].to_s.include?('_nc_hot=')
+  end
+
+  # The same file already received from a different contact. Also records the file for later messages.
   def duplicate_media?(media)
     key = format(Redis::RedisKeys::WAHA_MEDIA_FINGERPRINT, sha256: media[:fileSHA256])
     sender = params.dig(:payload, :from)

@@ -292,6 +292,11 @@ pt_BR:
         call_permission_request_body: 'Gostaríamos de ligar para você em relação à sua conversa.'
         flow_response: 'Enviou uma resposta de um Flow'
         unsupported_message: 'Esta mensagem não está disponível.'
+      waha:
+        forwarded_message: "🚨 **ALERTA: MENSAGEM ENCAMINHADA**\n\nO contato encaminhou este conteúdo de outra conversa. Confirme que é dele antes de usar."
+        stale_media: "🚨 **ALERTA: ARQUIVO REAPROVEITADO**\n\nEste arquivo foi criado muito antes de ser enviado, então pode ser um arquivo antigo enviado de novo. Confirme que é do contato antes de usar."
+        cached_media: "🚨 **ALERTA: ARQUIVO JÁ ENVIADO ANTES**\n\nO WhatsApp entregou este arquivo do cache, e não de um envio novo, então ele provavelmente foi enviado antes ou encaminhado. Confirme que é do contato antes de usar."
+        duplicate_media: "🚨 **ALERTA: ARQUIVO DUPLICADO**\n\nEste arquivo idêntico já foi recebido de outro contato. Confirme que é do contato antes de usar."
       voice_call:
         twilio: 'Chamada de Voz'
         whatsapp: 'Chamada do WhatsApp'
