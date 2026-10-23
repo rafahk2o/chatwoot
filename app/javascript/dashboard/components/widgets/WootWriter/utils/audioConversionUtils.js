@@ -106,30 +106,20 @@ export const encodeToMP3 = (channels, sampleRate, samples, bitrate = 128) => {
 export const convertToMp3 = async (audioBlob, bitrate = 128) => {
   try {
     const audioBuffer = await decodeAudioData(audioBlob);
-    const samples = new Int16Array(
-      audioBuffer.length * audioBuffer.numberOfChannels
+    const channelData = Array.from(
+      { length: audioBuffer.numberOfChannels },
+      (_, channel) => audioBuffer.getChannelData(channel)
     );
-    let offset = 0;
+    // The encoder takes one channel here, so mix stereo microphones down to mono.
+    const samples = new Int16Array(audioBuffer.length);
     for (let i = 0; i < audioBuffer.length; i += 1) {
-      for (
-        let channel = 0;
-        channel < audioBuffer.numberOfChannels;
-        channel += 1
-      ) {
-        const sample = Math.max(
-          -1,
-          Math.min(1, audioBuffer.getChannelData(channel)[i])
-        );
-        samples[offset] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-        offset += 1;
-      }
+      const mixed =
+        channelData.reduce((sum, data) => sum + data[i], 0) /
+        channelData.length;
+      const sample = Math.max(-1, Math.min(1, mixed));
+      samples[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
     }
-    return encodeToMP3(
-      audioBuffer.numberOfChannels,
-      audioBuffer.sampleRate,
-      samples,
-      bitrate
-    );
+    return encodeToMP3(1, audioBuffer.sampleRate, samples, bitrate);
   } catch (error) {
     throw new Error('Conversion to MP3 failed.');
   }
