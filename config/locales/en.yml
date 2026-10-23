@@ -322,10 +322,10 @@ en:
         request_contact_info: 'Would you like to share your phone number with us?'
         unsupported_message: 'This message is unavailable.'
       waha:
-        forwarded_message: '⚠️ Forwarded message: the contact forwarded this content from another chat. Confirm it is theirs before relying on it.'
-        stale_media: '⚠️ Reused file: this media was created long before it was sent, so it may be an old file sent again. Confirm it is theirs before relying on it.'
-        cached_media: '⚠️ Reused file: WhatsApp served this media from its cache instead of a new upload, so it was likely sent before or forwarded. Confirm it is theirs before relying on it.'
-        duplicate_media: '⚠️ Duplicate file: this exact file was already received from another contact. Confirm it is theirs before relying on it.'
+        forwarded_message: "🚨 **ALERT: FORWARDED MESSAGE**\n\nThe contact forwarded this content from another chat. Confirm it is theirs before using it."
+        stale_media: "🚨 **ALERT: REUSED FILE**\n\nThis file was created long before it was sent, so it may be an old file sent again. Confirm it is theirs before using it."
+        cached_media: "🚨 **ALERT: FILE SENT BEFORE**\n\nWhatsApp served this file from its cache instead of a new upload, so it was likely sent before or forwarded. Confirm it is theirs before using it."
+        duplicate_media: "🚨 **ALERT: DUPLICATE FILE**\n\nThis exact file was already received from another contact. Confirm it is theirs before using it."
       voice_call:
         twilio: 'Voice Call'
         whatsapp: 'WhatsApp Call'
