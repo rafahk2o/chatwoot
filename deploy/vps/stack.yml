@@ -41,8 +41,9 @@ services:
         # Above the legacy stack's router (priority 1) while both exist.
         - traefik.http.routers.chatwoot_v2_app.priority=100
         - traefik.http.routers.chatwoot_v2_app.service=chatwoot_v2_app
-        - traefik.http.routers.chatwoot_v2_app.middlewares=chatwoot_v2_https_header
+        - traefik.http.routers.chatwoot_v2_app.middlewares=chatwoot_v2_https_header,chatwoot_v2_compress
         - traefik.http.middlewares.chatwoot_v2_https_header.headers.customrequestheaders.X-Forwarded-Proto=https
+        - traefik.http.middlewares.chatwoot_v2_compress.compress=true
         - traefik.http.services.chatwoot_v2_app.loadbalancer.server.port=3000
         - traefik.http.services.chatwoot_v2_app.loadbalancer.passHostHeader=true
       resources:
